@@ -1,5 +1,6 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { AnimatedCircularProgress } from "react-native-circular-progress";
 import { TNavigationScreenProps } from "../AppRoutes";
@@ -7,6 +8,12 @@ import { Theme } from "../shared/themes/Theme";
 
 export const Home = () => {
   const navigation = useNavigation<TNavigationScreenProps>();
+
+  const [isRunning, setIsRunning] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(25 * 60); // Tempo em segundos
+  const [completedPomodoros, setCompletedPomodoros] = useState(0);
+
   return (
     <View style={styles.mainContainer}>
       <TouchableOpacity
@@ -22,13 +29,29 @@ export const Home = () => {
           </View>
 
           <View style={styles.stateContainer}>
-            <Text style={styles.stateText}>Hora de se concentrar</Text>
+            {!isRunning && (
+              <Text style={styles.stateText}>Vamos nos concentrar?</Text>
+            )}
 
-            <Text style={styles.stateText}>Pausa curta</Text>
+            {isRunning && (
+              <>
+                {!isPaused && (
+                  <Text style={styles.stateText}>Hora de se concentrar</Text>
+                )}
 
-            <Text style={styles.stateText}>Pausa longa</Text>
+                {/* {isRunning && isPaused && (
+                  <Text style={styles.stateText}>Pausa curta</Text>
+                )}
 
-            <Text style={styles.stateText}>Cronômetro em pausa</Text>
+                {!isRunning && isPaused && (
+                  <Text style={styles.stateText}>Pausa longa</Text>
+                )} */}
+
+                {isPaused && (
+                  <Text style={styles.stateText}>Cronômetro em pausa</Text>
+                )}
+              </>
+            )}
           </View>
 
           <View style={styles.progressContainer}>
@@ -44,31 +67,55 @@ export const Home = () => {
           </View>
         </View>
 
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.primaryButton}>
-            <Text style={styles.primaryButtonText}>Iniciar</Text>
-          </TouchableOpacity>
-        </View>
+        {!isRunning && (
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={() => setIsRunning(true)}
+            >
+              <Text style={styles.primaryButtonText}>Iniciar</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.primaryButton}>
-            <Text style={styles.primaryButtonText}>Pausar</Text>
-          </TouchableOpacity>
+        {isRunning && !isPaused && (
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={() => setIsPaused(true)}
+            >
+              <Text style={styles.primaryButtonText}>Pausar</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity style={styles.secondaryButton}>
-            <Text style={styles.secondaryButtonText}>Parar</Text>
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              onPress={() => setIsRunning(false)}
+            >
+              <Text style={styles.secondaryButtonText}>Parar</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.primaryButton}>
-            <Text style={styles.primaryButtonText}>Continuar</Text>
-          </TouchableOpacity>
+        {isRunning && isPaused && (
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={() => setIsPaused(false)}
+            >
+              <Text style={styles.primaryButtonText}>Continuar</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity style={styles.secondaryButton}>
-            <Text style={styles.secondaryButtonText}>Reiniciar</Text>
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              onPress={() => {
+                setIsPaused(false);
+                setIsRunning(false);
+              }}
+            >
+              <Text style={styles.secondaryButtonText}>Reiniciar</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={styles.pomodoroContainer}>
           <Text style={styles.pomodoroText}>Pomodoros completos:</Text>
