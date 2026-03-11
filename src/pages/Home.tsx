@@ -1,6 +1,6 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { AnimatedCircularProgress } from "react-native-circular-progress";
 import { TNavigationScreenProps } from "../AppRoutes";
@@ -9,10 +9,112 @@ import { Theme } from "../shared/themes/Theme";
 export const Home = () => {
   const navigation = useNavigation<TNavigationScreenProps>();
 
+  const [currentStatus, setCurrentStatus] = useState<
+    "focus" | "long_break" | "short_break"
+  >("focus");
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(25 * 60); // Tempo em segundos
-  const [completedPomodoros, setCompletedPomodoros] = useState(0);
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+
+  const [currentShortBreakCircleTime] = useState(5 * 60);
+  const [currentLongBreakCircleTime] = useState(15 * 60);
+  const [currentFocusCircleTime] = useState(25 * 60);
+  const [counterCircleTime, setCounterCircleTime] = useState(25 * 60);
+
+  useEffect(() => {
+    if (!isRunning || isPaused) return;
+
+    const ref = setInterval(() => {
+      setCounterCircleTime((old) => (old <= 0 ? old : old - 100));
+    }, 1000);
+
+    return () => {
+      clearInterval(ref);
+    };
+  }, [isRunning, isPaused]);
+
+  useEffect(() => {
+    switch (currentStatus) {
+      case "focus": {
+        if (counterCircleTime > 0) break;
+        if (step < 4) {
+          setStep((old) => (old + 1) as 1);
+          setCurrentStatus("short_break");
+          setCounterCircleTime(currentShortBreakCircleTime);
+        } else {
+          setStep(1);
+          setCurrentStatus("long_break");
+          setCounterCircleTime(currentLongBreakCircleTime);
+        }
+        break;
+      }
+      case "short_break":
+      case "long_break": {
+        if (counterCircleTime <= 0) {
+          setCurrentStatus("focus");
+          setCounterCircleTime(currentFocusCircleTime);
+        }
+        break;
+      }
+      default:
+        break;
+    }
+  }, [
+    counterCircleTime,
+    currentStatus,
+    step,
+    currentShortBreakCircleTime,
+    currentFocusCircleTime,
+    currentLongBreakCircleTime,
+  ]);
+
+  const handleStart = () => {
+    setIsRunning(true);
+    // setIsPaused(false);
+  };
+
+  const handlePause = () => {
+    setIsPaused(true);
+  };
+
+  const handleStop = () => {
+    setStep(1);
+    setIsRunning(false);
+    setIsPaused(false);
+    setCounterCircleTime(currentFocusCircleTime);
+
+    // if (step === 4) {
+    //   setStep(1);
+    //   return;
+    // }
+
+    // if (counterCircleTime === 0) {
+    //   setStep((old) => (old < 4 ? ((old + 1) as typeof step) : old));
+    // }
+  };
+
+  const handleContinue = () => {
+    setIsPaused(false);
+  };
+
+  const timeProgress = useMemo(() => {
+    switch (currentStatus) {
+      case "focus":
+        return 100 - (counterCircleTime / currentFocusCircleTime) * 100;
+      case "short_break":
+        return 100 - (counterCircleTime / currentShortBreakCircleTime) * 100;
+      case "long_break":
+        return 100 - (counterCircleTime / currentLongBreakCircleTime) * 100;
+      default:
+        return 0;
+    }
+  }, [
+    counterCircleTime,
+    currentStatus,
+    currentFocusCircleTime,
+    currentShortBreakCircleTime,
+    currentLongBreakCircleTime,
+  ]);
 
   return (
     <View style={styles.mainContainer}>
@@ -35,17 +137,17 @@ export const Home = () => {
 
             {isRunning && (
               <>
-                {!isPaused && (
+                {!isPaused && currentStatus === "focus" && (
                   <Text style={styles.stateText}>Hora de se concentrar</Text>
                 )}
 
-                {/* {isRunning && isPaused && (
+                {!isPaused && currentStatus === "short_break" && (
                   <Text style={styles.stateText}>Pausa curta</Text>
                 )}
 
-                {!isRunning && isPaused && (
+                {!isPaused && currentStatus === "long_break" && (
                   <Text style={styles.stateText}>Pausa longa</Text>
-                )} */}
+                )}
 
                 {isPaused && (
                   <Text style={styles.stateText}>Cronômetro em pausa</Text>
@@ -58,11 +160,16 @@ export const Home = () => {
             <AnimatedCircularProgress
               size={160}
               width={7}
-              fill={10}
+              fill={timeProgress}
               tintColor={Theme.colors.divider}
               backgroundColor={Theme.colors.primary}
               rotation={0}
-              children={() => <Text style={styles.progressText}>12:45</Text>}
+              children={() => (
+                <Text style={styles.progressText}>
+                  {Math.floor(counterCircleTime / 60)}:
+                  {String(counterCircleTime % 60).padStart(2, "0")}
+                </Text>
+              )}
             />
           </View>
         </View>
@@ -71,7 +178,7 @@ export const Home = () => {
           <View style={styles.buttonContainer}>
             <TouchableOpacity
               style={styles.primaryButton}
-              onPress={() => setIsRunning(true)}
+              onPress={handleStart}
             >
               <Text style={styles.primaryButtonText}>Iniciar</Text>
             </TouchableOpacity>
@@ -82,14 +189,14 @@ export const Home = () => {
           <View style={styles.buttonContainer}>
             <TouchableOpacity
               style={styles.primaryButton}
-              onPress={() => setIsPaused(true)}
+              onPress={handlePause}
             >
               <Text style={styles.primaryButtonText}>Pausar</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.secondaryButton}
-              onPress={() => setIsRunning(false)}
+              onPress={handleStop}
             >
               <Text style={styles.secondaryButtonText}>Parar</Text>
             </TouchableOpacity>
@@ -100,19 +207,16 @@ export const Home = () => {
           <View style={styles.buttonContainer}>
             <TouchableOpacity
               style={styles.primaryButton}
-              onPress={() => setIsPaused(false)}
+              onPress={handleContinue}
             >
               <Text style={styles.primaryButtonText}>Continuar</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.secondaryButton}
-              onPress={() => {
-                setIsPaused(false);
-                setIsRunning(false);
-              }}
+              onPress={handleStop}
             >
-              <Text style={styles.secondaryButtonText}>Reiniciar</Text>
+              <Text style={styles.secondaryButtonText}>Parar</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -120,13 +224,37 @@ export const Home = () => {
         <View style={styles.pomodoroContainer}>
           <Text style={styles.pomodoroText}>Pomodoros completos:</Text>
 
-          <View style={styles.pomodoroIndicatorComplete} />
+          <View
+            style={
+              step >= 2
+                ? styles.pomodoroIndicatorComplete
+                : styles.pomodoroIndicator
+            }
+          />
 
-          <View style={styles.pomodoroIndicatorComplete} />
+          <View
+            style={
+              step >= 3
+                ? styles.pomodoroIndicatorComplete
+                : styles.pomodoroIndicator
+            }
+          />
 
-          <View style={styles.pomodoroIndicatorComplete} />
+          <View
+            style={
+              step >= 4
+                ? styles.pomodoroIndicatorComplete
+                : styles.pomodoroIndicator
+            }
+          />
 
-          <View style={styles.pomodoroIndicator} />
+          <View
+            style={
+              step === 1 && currentStatus === "long_break"
+                ? styles.pomodoroIndicatorComplete
+                : styles.pomodoroIndicator
+            }
+          />
         </View>
       </View>
     </View>
