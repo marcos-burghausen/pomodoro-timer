@@ -12,6 +12,7 @@ import {
 import { AnimatedCircularProgress } from "react-native-circular-progress";
 import { TNavigationScreenProps } from "../AppRoutes";
 import { updateStateByElapsedTime } from "../shared/helpers/UpdateStateByElapsedTime";
+import { NotificationService } from "../shared/service/NotificationService";
 import { Theme } from "../shared/themes/Theme";
 
 export const Home = () => {
@@ -130,7 +131,17 @@ export const Home = () => {
     }
   }, [appRinningState]);
 
-  const handleStart = () => {
+  useEffect(() => {
+    NotificationService.requestPermission();
+
+    if (appRinningState != "active") {
+      NotificationService.activateNotification();
+    } else {
+      NotificationService.deactivateNotification();
+    }
+  }, [appRinningState]);
+
+  const handleStart = async () => {
     setIsRunning(true);
 
     AsyncStorage.setItem(
