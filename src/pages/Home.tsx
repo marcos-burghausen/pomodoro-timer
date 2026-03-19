@@ -37,6 +37,7 @@ export const Home = () => {
     15 * 60,
   );
   const [currentFocusCircleTime, setCurrentFocusCircleTime] = useState(25 * 60);
+  const [notificationActivated, setNotificationActivated] = useState(false);
   const [counterCircleTime, setCounterCircleTime] = useState(25 * 60);
 
   useFocusEffect(
@@ -45,18 +46,26 @@ export const Home = () => {
         AsyncStorage.getItem("SHORT_BREAK_PERIOD"),
         AsyncStorage.getItem("LONG_BREAK_PERIOD"),
         AsyncStorage.getItem("FOCUS_PERIOD"),
-      ]).then(([shortBreakValue, longBreakValue, focusValue]) => {
-        if (shortBreakValue)
+        AsyncStorage.getItem("NOTIFICATION_ACTIVATED"),
+      ]).then(
+        ([
+          shortBreakValue,
+          longBreakValue,
+          focusValue,
+          notificationActivated,
+        ]) => {
+          setNotificationActivated(
+            JSON.parse(notificationActivated || "false"),
+          );
           setCurrentShortBreakCircleTime(
             JSON.parse(shortBreakValue || "5") * 60,
           );
-        if (longBreakValue)
           setCurrentLongBreakCircleTime(
             JSON.parse(longBreakValue || "15") * 60,
           );
-        if (focusValue)
           setCurrentFocusCircleTime(JSON.parse(focusValue || "25") * 60);
-      });
+        },
+      );
     }, []),
   );
 
@@ -132,14 +141,21 @@ export const Home = () => {
   }, [appRinningState]);
 
   useEffect(() => {
-    NotificationService.requestPermission();
+    if (!notificationActivated) {
+      NotificationService.deactivateNotification();
+      return;
+    }
 
-    if (appRinningState != "active") {
+    if (appRinningState != "active" && isRunning && !isPaused) {
       NotificationService.activateNotification();
     } else {
       NotificationService.deactivateNotification();
     }
-  }, [appRinningState]);
+  }, [appRinningState, isRunning, isPaused, notificationActivated]);
+
+  useEffect(() => {
+    NotificationService.requestPermission();
+  }, []);
 
   const handleStart = async () => {
     setIsRunning(true);
